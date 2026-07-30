@@ -1,0 +1,6 @@
+{
+  "name": "Culto de Segunda",
+  "description": "Gerador de times equilibrados de vôlei com avaliação pós-jogo anônima e estatísticas.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
