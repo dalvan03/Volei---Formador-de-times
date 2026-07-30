@@ -1,0 +1,12 @@
+services:
+  volei-formador-de-times:
+    build: .
+    container_name: volei-formador-de-times
+    restart: unless-stopped
+    networks:
+      - nginx-proxy-network
+
+networks:
+  nginx-proxy-network:
+    external: true
+    name: nginx-proxy
