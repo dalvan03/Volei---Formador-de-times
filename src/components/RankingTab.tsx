@@ -29,7 +29,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({ players }) => {
             </span>
             <h2 className="text-xl font-extrabold tracking-tight">Ranking Dinâmico</h2>
             <p className="text-xs text-indigo-200 mt-1">
-              Médias formadas pelas avaliações anônimas pós-jogo
+              Classificação baseada no número de vitórias nas partidas
             </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-amber-400 shadow-inner">

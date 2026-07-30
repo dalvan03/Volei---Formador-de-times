@@ -173,11 +173,6 @@ export const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
                     <p className="text-xs font-bold text-slate-800 truncate group-hover:text-emerald-700">
                       {p.name}
                     </p>
-                    {p.isAdmin && (
-                      <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
-                        <Shield className="w-2.5 h-2.5" /> Admin
-                      </p>
-                    )}
                   </div>
                 </button>
               ))}

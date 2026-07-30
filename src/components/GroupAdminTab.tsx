@@ -12,8 +12,11 @@ import {
   Trash2,
   Edit2,
   Sparkles,
+  ChevronDown,
 } from 'lucide-react';
 import { Player, Match, Position, UserSession, BalanceFeedback } from '../types';
+import { UserMatchResultBadge } from './UserMatchResultBadge';
+import { MatchHistoryCard } from './MatchHistoryCard';
 
 interface GroupAdminTabProps {
   players: Player[];
@@ -39,6 +42,7 @@ export const GroupAdminTab: React.FC<GroupAdminTabProps> = ({
   const [phone, setPhone] = useState('');
   const [position, setPosition] = useState<Position>('Ponteiro');
   const [initialRating, setInitialRating] = useState<number>(3.0);
+  const [visibleMatchesCount, setVisibleMatchesCount] = useState(5);
 
   const isAdmin = session?.isAdmin || false;
 
@@ -153,35 +157,17 @@ export const GroupAdminTab: React.FC<GroupAdminTabProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Posição</label>
-                  <select
-                    value={position}
-                    onChange={(e) => setPosition(e.target.value as Position)}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="Ponteiro">Ponteiro</option>
-                    <option value="Levantador">Levantador</option>
-                    <option value="Central">Central</option>
-                    <option value="Oposto">Oposto</option>
-                    <option value="Líbero">Líbero</option>
-                    <option value="Geral">Geral</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Nível Inicial (1 a 5)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="1"
-                    max="5"
-                    value={initialRating}
-                    onChange={(e) => setInitialRating(parseFloat(e.target.value) || 3.5)}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Nível Inicial (1 a 5)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="5"
+                  value={initialRating}
+                  onChange={(e) => setInitialRating(parseFloat(e.target.value) || 3.5)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
 
               <button
@@ -216,14 +202,11 @@ export const GroupAdminTab: React.FC<GroupAdminTabProps> = ({
                 <div>
                   <p className="text-xs font-bold text-slate-900 flex items-center gap-1">
                     {player.name}
-                    {player.isAdmin && (
+                    {isAdmin && player.isAdmin && (
                       <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 rounded-md">
                         Admin
                       </span>
                     )}
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    {player.position} • {player.phone}
                   </p>
                 </div>
               </div>
@@ -247,40 +230,28 @@ export const GroupAdminTab: React.FC<GroupAdminTabProps> = ({
           {pastMatches.length === 0 ? (
             <p className="text-xs text-slate-500 italic">Nenhuma rodada anterior registrada.</p>
           ) : (
-            pastMatches.map((m) => {
-              const balancePct = getMatchBalancePercentage(m.id);
-              return (
-                <div
+            <>
+              {pastMatches.slice(0, visibleMatchesCount).map((m) => (
+                <MatchHistoryCard
                   key={m.id}
-                  className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-2"
+                  match={m}
+                  players={players}
+                  session={session}
+                  balancePct={getMatchBalancePercentage(m.id)}
+                />
+              ))}
+
+              {pastMatches.length > visibleMatchesCount && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleMatchesCount((prev) => prev + 5)}
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs border border-slate-200/60"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">{m.title}</p>
-                      <p className="text-[10px] text-slate-500">
-                        {new Date(m.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-
-                    {m.finalScore && (
-                      <span className="px-2.5 py-1 bg-slate-900 text-white font-extrabold text-xs rounded-xl">
-                        {m.teamA.name} {m.finalScore.teamASets} x {m.finalScore.teamBSets} {m.teamB.name}
-                      </span>
-                    )}
-                  </div>
-
-                  {balancePct !== null && (
-                    <div className="p-2 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between text-[11px] text-emerald-800 font-medium">
-                      <span className="flex items-center gap-1">
-                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                        Aprovação do Equilíbrio
-                      </span>
-                      <strong className="text-emerald-700">{balancePct}% dos atletas acharam equilibrado</strong>
-                    </div>
-                  )}
-                </div>
-              );
-            })
+                  <ChevronDown className="w-4 h-4 text-slate-500" />
+                  Carregar mais rodadas ({pastMatches.length - visibleMatchesCount} restantes)
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

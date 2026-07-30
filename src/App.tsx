@@ -23,6 +23,7 @@ import { AdminTab } from './components/AdminTab';
 import { PhoneAuthModal } from './components/PhoneAuthModal';
 import { LoginPage } from './components/LoginPage';
 import { EditProfileModal } from './components/EditProfileModal';
+import { PlayerScoresModal } from './components/PlayerScoresModal';
 
 const AVATAR_BG_OPTIONS = [
   'bg-emerald-600',
@@ -44,26 +45,31 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('game');
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [showPlayerScoresModal, setShowPlayerScoresModal] = useState<boolean>(false);
 
   // Helper to create a new match object with balanced teams
   const createMatchForDate = (dateString: string, titleStr: string, currentPlayers: Player[], existingPastMatches: Match[]): Match => {
     const activePlayers = currentPlayers.filter((p) => p.active !== false);
-    const presentPlayerIds = activePlayers.map((p) => p.id);
+    const presentPlayerIds: string[] = [];
 
     let teamA, teamB;
     try {
       const result = generateBalancedTeams(activePlayers, existingPastMatches, {
-        teamAName: 'Time Azul',
-        teamBName: 'Time Amarelo',
         teamAColor: 'bg-blue-600',
         teamBColor: 'bg-amber-600',
       });
       teamA = result.teamA;
       teamB = result.teamB;
     } catch {
-      const half = Math.ceil(presentPlayerIds.length / 2);
-      teamA = { id: 'teamA', name: 'Time Azul', color: 'bg-blue-600', playerIds: presentPlayerIds.slice(0, half) };
-      teamB = { id: 'teamB', name: 'Time Amarelo', color: 'bg-amber-600', playerIds: presentPlayerIds.slice(half) };
+      const half = Math.ceil(activePlayers.length / 2);
+      const teamAPlayers = activePlayers.slice(0, half);
+      const teamBPlayers = activePlayers.slice(half);
+      const randomA = teamAPlayers[Math.floor(Math.random() * (teamAPlayers.length || 1))];
+      const randomB = teamBPlayers[Math.floor(Math.random() * (teamBPlayers.length || 1))];
+      const nameA = randomA ? `Time ${randomA.name.split(' ')[0]}` : 'Time A';
+      const nameB = randomB ? `Time ${randomB.name.split(' ')[0]}` : 'Time B';
+      teamA = { id: 'teamA', name: nameA, color: 'bg-blue-600', playerIds: teamAPlayers.map((p) => p.id) };
+      teamB = { id: 'teamB', name: nameB, color: 'bg-amber-600', playerIds: teamBPlayers.map((p) => p.id) };
     }
 
     return {
@@ -110,7 +116,9 @@ export default function App() {
 
   // Current active match (agendada or em_andamento). Null if none active.
   const currentMatch = matches.find((m) => m.status === 'agendada' || m.status === 'em_andamento') || null;
-  const pastMatches = matches.filter((m) => m.status === 'finalizada');
+  const pastMatches = matches
+    .filter((m) => m.status === 'finalizada')
+    .sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime() || b.id.localeCompare(a.id));
 
   // Manual trigger to start a new match today
   const handleStartManualMatch = () => {
@@ -242,6 +250,40 @@ export default function App() {
     setPlayers(updated);
   };
 
+  // Add new guest player (no registration, fixed rating 3.0)
+  const handleAddGuest = (guestName?: string): Player => {
+    const existingGuests = players.filter((p) => p.isGuest || p.name.includes('(Convidado)') || p.name.startsWith('Convidado'));
+    const guestIndex = existingGuests.length + 1;
+    const rawName = guestName?.trim();
+
+    let finalName = rawName || `Convidado ${guestIndex}`;
+    if (rawName && !rawName.toLowerCase().includes('convidado')) {
+      finalName = `${rawName} (Convidado)`;
+    }
+
+    const randomBg = AVATAR_BG_OPTIONS[Math.floor(Math.random() * AVATAR_BG_OPTIONS.length)];
+
+    const newGuest: Player = {
+      id: `guest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: finalName,
+      phone: '',
+      rating: 3.0,
+      ratingCount: 0,
+      wins: 0,
+      losses: 0,
+      matchesPlayed: 0,
+      avatarBg: randomBg,
+      isAdmin: false,
+      active: true,
+      isGuest: true,
+    };
+
+    const updated = [...players, newGuest];
+    savePlayers(updated);
+    setPlayers(updated);
+    return newGuest;
+  };
+
   const handleUpdatePlayer = (updatedPlayer: Player) => {
     const updated = players.map((p) => (p.id === updatedPlayer.id ? updatedPlayer : p));
     savePlayers(updated);
@@ -293,6 +335,7 @@ export default function App() {
   };
 
   const handleToggleAdmin = (playerId: string) => {
+    if (!session?.isAdmin) return;
     const updated = players.map((p) => {
       if (p.id === playerId) {
         return { ...p, isAdmin: !p.isAdmin };
@@ -434,6 +477,8 @@ export default function App() {
               onDeleteMatch={handleDeleteMatch}
               onNavigateToFeedback={() => setActiveTab('feedback')}
               onStartManualMatch={handleStartManualMatch}
+              onAddGuest={handleAddGuest}
+              onDeleteGuest={handleDeletePlayer}
             />
           )}
 
@@ -490,6 +535,21 @@ export default function App() {
             onSave={handleSaveProfile}
             onLogout={handleLogout}
             onClose={() => setShowProfileModal(false)}
+            onOpenPlayerScores={() => {
+              if (session.player?.isAdmin) {
+                setShowPlayerScoresModal(true);
+              }
+            }}
+          />
+        )}
+
+        {/* Player Scores & Votes Modal (Admin only) */}
+        {showPlayerScoresModal && session?.player?.isAdmin && (
+          <PlayerScoresModal
+            isOpen={showPlayerScoresModal}
+            onClose={() => setShowPlayerScoresModal(false)}
+            players={players}
+            pastMatches={matches}
           />
         )}
       </div>

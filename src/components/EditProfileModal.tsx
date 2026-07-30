@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, Check, X, LogOut, Camera, Shield } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { User, Check, X, LogOut, Camera, Shield, Lock } from 'lucide-react';
 import { Player } from '../types';
 import { PhotoCapture } from './PhotoCapture';
 
@@ -8,6 +8,7 @@ interface EditProfileModalProps {
   onSave: (updatedPlayer: Player) => void;
   onLogout: () => void;
   onClose: () => void;
+  onOpenPlayerScores?: () => void;
 }
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
@@ -15,11 +16,54 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   onSave,
   onLogout,
   onClose,
+  onOpenPlayerScores,
 }) => {
   const [name, setName] = useState(player.name || '');
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(player.photoUrl);
   const [errorMsg, setErrorMsg] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const [holdProgress, setHoldProgress] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cancelHold = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    timerRef.current = null;
+    intervalRef.current = null;
+    setHoldProgress(0);
+  };
+
+  const startHold = () => {
+    if (!player.isAdmin || !onOpenPlayerScores) return;
+    cancelHold();
+
+    const startTime = Date.now();
+    const duration = 5000; // 5 seconds
+
+    intervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, (elapsed / duration) * 100);
+      setHoldProgress(pct);
+    }, 50);
+
+    timerRef.current = setTimeout(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setHoldProgress(100);
+      if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(200);
+      }
+      onOpenPlayerScores();
+      setHoldProgress(0);
+    }, duration);
+  };
+
+  useEffect(() => {
+    return () => {
+      cancelHold();
+    };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,8 +91,35 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-5 text-white relative flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
-              <User className="w-5 h-5" />
+            <div
+              onMouseDown={startHold}
+              onMouseUp={cancelHold}
+              onMouseLeave={cancelHold}
+              onTouchStart={startHold}
+              onTouchEnd={cancelHold}
+              onTouchCancel={cancelHold}
+              className={`relative w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 select-none ${
+                player.isAdmin ? 'cursor-pointer hover:bg-emerald-500/30 active:scale-95 transition-all' : ''
+              }`}
+              title={player.isAdmin ? 'Segure por 5 segundos para ver pontuações secretas' : undefined}
+            >
+              <User className="w-5 h-5 relative z-10" />
+              {player.isAdmin && holdProgress > 0 && (
+                <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
+                  <circle
+                    cx="20"
+                    cy="20"
+                    r="17"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    className="text-amber-400"
+                    fill="transparent"
+                    strokeDasharray="106.8"
+                    strokeDashoffset={106.8 * (1 - holdProgress / 100)}
+                    strokeLinecap="round"
+                  />
+                </svg>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -59,7 +130,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-300">Altere seu nome e foto de perfil</p>
+              {player.isAdmin && holdProgress > 0 ? (
+                <p className="text-xs text-amber-300 font-bold animate-pulse flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Segure para acessar... ({Math.max(1, Math.ceil((5000 - (holdProgress / 100 * 5000)) / 1000))}s)
+                </p>
+              ) : (
+                <p className="text-xs text-slate-300">Altere seu nome e foto de perfil</p>
+              )}
             </div>
           </div>
 

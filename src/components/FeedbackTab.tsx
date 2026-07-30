@@ -3,6 +3,7 @@ import { Star, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { Match, Player, UserSession } from '../types';
 import { StarRating } from './StarRating';
 import { PlayerAvatar } from './PlayerAvatar';
+import { UserMatchResultBadge } from './UserMatchResultBadge';
 import { saveBalanceFeedback, savePlayerRatingFeedbacks, getStoredBalanceFeedbacks } from '../utils/storage';
 
 interface FeedbackTabProps {
@@ -188,9 +189,12 @@ export const FeedbackTab: React.FC<FeedbackTabProps> = ({
               )}
             </div>
             <h2 className="text-xl font-extrabold tracking-tight">{targetMatch.title}</h2>
-            <p className="text-xs text-amber-100 mt-1">
-              📅 {new Date(targetMatch.date + 'T00:00:00').toLocaleDateString('pt-BR')} • Placar: {targetMatch.finalScore?.teamASets ?? 0} x {targetMatch.finalScore?.teamBSets ?? 0}
-            </p>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <p className="text-xs text-amber-100">
+                📅 {new Date(targetMatch.date + 'T00:00:00').toLocaleDateString('pt-BR')} • Placar: {targetMatch.finalScore?.teamASets ?? 0} x {targetMatch.finalScore?.teamBSets ?? 0}
+              </p>
+              <UserMatchResultBadge match={targetMatch} currentUser={currentUser} compact />
+            </div>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-white shadow-inner">
             <Star className="w-7 h-7 fill-white" />

@@ -11,10 +11,15 @@ import {
   Sparkles,
   ChevronRight,
   Star,
+  UserPlus,
+  X,
+  Plus,
+  Share2,
 } from 'lucide-react';
 import { Player, Match, UserSession } from '../types';
 import { generateBalancedTeams } from '../utils/teamGenerator';
 import { PlayerAvatar } from './PlayerAvatar';
+import { ShareStoryModal } from './ShareStoryModal';
 
 interface GameDayTabProps {
   players: Player[];
@@ -26,6 +31,8 @@ interface GameDayTabProps {
   onDeleteMatch: (matchId: string) => void;
   onNavigateToFeedback: () => void;
   onStartManualMatch: () => void;
+  onAddGuest?: (guestName?: string) => Player;
+  onDeleteGuest?: (playerId: string) => void;
 }
 
 export const GameDayTab: React.FC<GameDayTabProps> = ({
@@ -38,21 +45,48 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
   onDeleteMatch,
   onNavigateToFeedback,
   onStartManualMatch,
+  onAddGuest,
+  onDeleteGuest,
 }) => {
   const [selectedPresentIds, setSelectedPresentIds] = useState<string[]>(
-    currentMatch ? currentMatch.presentPlayerIds : players.filter((p) => p.active !== false).map((p) => p.id)
+    currentMatch ? (currentMatch.presentPlayerIds || []) : []
   );
 
   // Sync selectedPresentIds if currentMatch presentPlayerIds changes
   useEffect(() => {
     if (currentMatch) {
-      setSelectedPresentIds(currentMatch.presentPlayerIds);
+      setSelectedPresentIds(currentMatch.presentPlayerIds || []);
+    } else {
+      setSelectedPresentIds([]);
     }
-  }, [currentMatch?.id, currentMatch?.presentPlayerIds.length]);
+  }, [currentMatch?.id, currentMatch?.presentPlayerIds?.length]);
 
   const [swapPlayerA, setSwapPlayerA] = useState<string | null>(null);
   const [isSwapping, setIsSwapping] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddGuestModal, setShowAddGuestModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [guestNameInput, setGuestNameInput] = useState('');
+
+  const handleAddGuestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onAddGuest) return;
+
+    const newGuest = onAddGuest(guestNameInput);
+    setGuestNameInput('');
+    setShowAddGuestModal(false);
+
+    // Auto select guest in presence
+    const newSelected = [...selectedPresentIds, newGuest.id];
+    setSelectedPresentIds(newSelected);
+
+    if (currentMatch && currentMatch.status === 'agendada') {
+      onUpdateMatch({
+        ...currentMatch,
+        presentPlayerIds: newSelected,
+      });
+    }
+  };
 
   // Set wins count for finalizing match
   const [teamASets, setTeamASets] = useState<number>(
@@ -98,8 +132,6 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
     }
 
     const { teamA, teamB } = generateBalancedTeams(presentPlayers, pastMatches, {
-      teamAName: 'Time Azul',
-      teamBName: 'Time Amarelo',
       teamAColor: 'bg-blue-600',
       teamBColor: 'bg-amber-600',
     });
@@ -271,6 +303,16 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowShareModal(true)}
+                  title="Compartilhar no Instagram/Facebook Story"
+                  className="px-3 py-2 bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 hover:opacity-90 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-pink-500/20 shrink-0"
+                >
+                  <Share2 className="w-4 h-4 text-white" />
+                  <span className="hidden sm:inline">Story</span>
+                </button>
+
                 {currentMatch.status === 'agendada' && (
                   <button
                     type="button"
@@ -281,8 +323,8 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
                     <Trash2 className="w-5 h-5" />
                   </button>
                 )}
-                <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-emerald-400 font-bold shadow-inner">
-                  <Volleyball className="w-7 h-7" />
+                <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-emerald-400 font-bold shadow-inner shrink-0">
+                  <Volleyball className="w-6 h-6" />
                 </div>
               </div>
             </div>
@@ -291,7 +333,7 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
           {/* Presence Selection ("Quem vai jogar hoje?") - Available while status is 'agendada' */}
           {currentMatch.status === 'agendada' && (
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <Users className="w-4 h-4 text-emerald-600" />
@@ -299,36 +341,78 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
                   </h3>
                   <p className="text-xs text-slate-500">Marque os atletas presentes na quadra</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={selectAll}
-                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg cursor-pointer"
-                >
-                  Marcar Todos ({players.length})
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddGuestModal(true)}
+                    className="text-xs font-extrabold text-purple-700 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-2.5 py-1 rounded-xl cursor-pointer flex items-center gap-1 shadow-2xs transition-all"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 text-purple-600" />
+                    + Convidado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={selectAll}
+                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 px-2.5 py-1 rounded-xl cursor-pointer transition-all"
+                  >
+                    Marcar Todos ({players.length})
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {players.map((p) => {
-                  const isSelected = selectedPresentIds.includes(p.id);
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => togglePresence(p.id)}
-                      className={`p-2 rounded-2xl border text-left transition-all flex items-center gap-2 cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500/20'
-                          : 'bg-slate-50 border-slate-200 opacity-60'
-                      }`}
-                    >
-                      <PlayerAvatar player={p} size="sm" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                {[...players]
+                  .sort((a, b) => {
+                    if (a.isGuest && !b.isGuest) return 1;
+                    if (!a.isGuest && b.isGuest) return -1;
+                    const mA = a.matchesPlayed || 0;
+                    const mB = b.matchesPlayed || 0;
+                    if (mB !== mA) return mB - mA;
+                    return a.name.localeCompare(b.name, 'pt-BR');
+                  })
+                  .map((p) => {
+                    const isSelected = selectedPresentIds.includes(p.id);
+                    return (
+                      <div key={p.id} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => togglePresence(p.id)}
+                          className={`w-full p-2 rounded-2xl border text-left transition-all flex items-center gap-2 cursor-pointer ${
+                            isSelected
+                              ? p.isGuest
+                                ? 'bg-purple-50/90 border-purple-300 ring-2 ring-purple-500/20'
+                                : 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500/20'
+                              : 'bg-slate-50 border-slate-200 opacity-60'
+                          }`}
+                        >
+                          <PlayerAvatar player={p} size="sm" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                            {p.isGuest ? (
+                              <p className="text-[10px] text-purple-700 font-bold flex items-center gap-0.5 truncate">
+                                Convidado • Nota 3.0
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-slate-500 font-medium">{p.matchesPlayed || 0} jogos</p>
+                            )}
+                          </div>
+                        </button>
+                        {p.isGuest && onDeleteGuest && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteGuest(p.id);
+                            }}
+                            title="Remover convidado"
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 hover:bg-rose-600 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm transition-all cursor-pointer opacity-90 hover:opacity-100 z-10"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
-                    </button>
-                  );
-                })}
+                    );
+                  })}
               </div>
 
               <div className="pt-2">
@@ -495,9 +579,9 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
 
                   {/* Sets Won Input Row */}
                   <div className="grid grid-cols-2 gap-3 bg-slate-800/90 p-4 rounded-2xl">
-                    {/* Team Azul Sets */}
+                    {/* Team A Sets */}
                     <div className="flex flex-col items-center gap-1.5 p-2 bg-slate-900/60 rounded-xl border border-blue-500/30">
-                      <span className="text-xs font-bold text-blue-400">Time Azul</span>
+                      <span className="text-xs font-bold text-blue-400 truncate max-w-[130px]">{currentMatch.teamA.name}</span>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -518,9 +602,9 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
                       <span className="text-[10px] text-slate-400 font-medium">sets vencidos</span>
                     </div>
 
-                    {/* Team Amarelo Sets */}
+                    {/* Team B Sets */}
                     <div className="flex flex-col items-center gap-1.5 p-2 bg-slate-900/60 rounded-xl border border-amber-500/30">
-                      <span className="text-xs font-bold text-amber-400">Time Amarelo</span>
+                      <span className="text-xs font-bold text-amber-400 truncate max-w-[130px]">{currentMatch.teamB.name}</span>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -592,6 +676,78 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Guest Modal */}
+      {showAddGuestModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-5 w-full max-w-sm shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Adicionar Convidado</h3>
+                  <p className="text-[11px] text-purple-700 font-bold">Nota 3.0 fixa para o sorteio</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddGuestModal(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddGuestSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Nome do Convidado
+                </label>
+                <input
+                  type="text"
+                  value={guestNameInput}
+                  onChange={(e) => setGuestNameInput(e.target.value)}
+                  placeholder="Ex: Carlos (Convidado)"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
+                  autoFocus
+                />
+                <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                  Os convidados são atletas sem cadastro. Para o balanceamento dos times, o sistema utilizará a nota 3.0 para calcular a força da equipe.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddGuestModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-2xl transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold rounded-2xl shadow-md shadow-purple-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Share Story Modal */}
+      {showShareModal && currentMatch && (
+        <ShareStoryModal
+          match={currentMatch}
+          players={players}
+          session={session}
+          onClose={() => setShowShareModal(false)}
+        />
       )}
     </div>
   );

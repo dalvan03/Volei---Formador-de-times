@@ -247,14 +247,9 @@ export const PlayerScoresModal: React.FC<PlayerScoresModalProps> = ({
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <h4 className="font-extrabold text-slate-900 text-sm truncate">{player.name}</h4>
-                          {player.position && (
-                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-200/60 shrink-0">
-                              {player.position}
-                            </span>
-                          )}
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                          {player.phone ? `📱 ${player.phone}` : 'Sem telefone'}
+                          Atleta do Grupo
                         </p>
                       </div>
                     </div>

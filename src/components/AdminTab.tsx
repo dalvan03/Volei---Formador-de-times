@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Shield, Phone, Edit2, Trash2, Volleyball, RefreshCw, CheckCircle2, RotateCcw, BarChart2 } from 'lucide-react';
+import { Users, UserPlus, Shield, Phone, Edit2, Trash2, Volleyball, RefreshCw, CheckCircle2, RotateCcw, ChevronDown } from 'lucide-react';
 import { Player, Match, UserSession } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { PhotoCapture } from './PhotoCapture';
-import { PlayerScoresModal } from './PlayerScoresModal';
+import { UserMatchResultBadge } from './UserMatchResultBadge';
+import { MatchHistoryCard } from './MatchHistoryCard';
 
 interface AdminTabProps {
   players: Player[];
@@ -40,7 +41,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({
   const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null);
   const [matchToDelete, setMatchToDelete] = useState<Match | null>(null);
   const [showResetStatsModal, setShowResetStatsModal] = useState(false);
-  const [showScoresModal, setShowScoresModal] = useState(false);
+  const [visibleMatchesCount, setVisibleMatchesCount] = useState(5);
 
   const isAdmin = session?.isAdmin || false;
 
@@ -59,7 +60,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPlayer) return;
+    if (!isAdmin || !editingPlayer) return;
     onUpdatePlayer(editingPlayer);
     setEditingPlayer(null);
   };
@@ -130,38 +131,39 @@ export const AdminTab: React.FC<AdminTabProps> = ({
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <h4 className="font-extrabold text-slate-900 text-sm truncate">{p.name}</h4>
-                  {p.isAdmin && (
+                  {isAdmin && p.isAdmin && (
                     <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded-md flex items-center gap-0.5">
                       <Shield className="w-2.5 h-2.5" /> Admin
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-500 flex items-center gap-2">
-                  <span>📱 {p.phone}</span>
-                </p>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => setEditingPlayer(p)}
-                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all cursor-pointer"
-                title="Editar Jogador"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setEditingPlayer(p)}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all cursor-pointer"
+                  title="Editar Jogador"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+              )}
 
-              <button
-                onClick={() => onToggleAdmin(p.id)}
-                className={`p-2 rounded-xl transition-all cursor-pointer ${
-                  p.isAdmin
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-slate-100 text-slate-400 hover:text-slate-600'
-                }`}
-                title={p.isAdmin ? 'Remover Admin' : 'Tornar Admin'}
-              >
-                <Shield className="w-4 h-4" />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => onToggleAdmin(p.id)}
+                  className={`p-2 rounded-xl transition-all cursor-pointer ${
+                    p.isAdmin
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-slate-100 text-slate-400 hover:text-slate-600'
+                  }`}
+                  title={p.isAdmin ? 'Remover Admin' : 'Tornar Admin'}
+                >
+                  <Shield className="w-4 h-4" />
+                </button>
+              )}
 
               {isAdmin && onDeletePlayer && (
                 <button
@@ -189,51 +191,27 @@ export const AdminTab: React.FC<AdminTabProps> = ({
           <p className="text-xs text-slate-500 italic">Nenhuma rodada anterior cadastrada.</p>
         ) : (
           <div className="space-y-2.5">
-            {pastMatches.map((m) => (
-              <div
+            {pastMatches.slice(0, visibleMatchesCount).map((m) => (
+              <MatchHistoryCard
                 key={m.id}
-                className="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80 space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800">{m.title || `Jogo de ${m.date}`}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-                      {new Date(m.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                    </span>
-                    {isAdmin && onDeleteMatch && (
-                      <button
-                        type="button"
-                        onClick={() => setMatchToDelete(m)}
-                        title="Excluir rodada do histórico"
-                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all cursor-pointer border border-rose-200/60 shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-2xl text-xs font-bold">
-                  <span className="text-blue-700">{m.teamA.name}</span>
-                  <span className="text-slate-900 text-sm font-extrabold">
-                    {m.finalScore ? `${m.finalScore.teamASets} x ${m.finalScore.teamBSets}` : 'Sem placar'}
-                  </span>
-                  <span className="text-amber-700">{m.teamB.name}</span>
-                </div>
-              </div>
+                match={m}
+                players={players}
+                session={session}
+                onDeleteMatch={isAdmin && onDeleteMatch ? (match) => setMatchToDelete(match) : undefined}
+              />
             ))}
-          </div>
-        )}
 
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={() => setShowScoresModal(true)}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <BarChart2 className="w-4.5 h-4.5 text-amber-300" />
-            Ver Pontuação & Votações de Cada Atleta
-          </button>
+            {pastMatches.length > visibleMatchesCount && (
+              <button
+                type="button"
+                onClick={() => setVisibleMatchesCount((prev) => prev + 5)}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs border border-slate-200/60"
+              >
+                <ChevronDown className="w-4 h-4 text-slate-500" />
+                Carregar mais rodadas ({pastMatches.length - visibleMatchesCount} restantes)
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -319,7 +297,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({
       )}
 
       {/* Edit Player Modal */}
-      {editingPlayer && (
+      {isAdmin && editingPlayer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-slate-900">Editar Atleta</h3>
@@ -527,14 +505,6 @@ export const AdminTab: React.FC<AdminTabProps> = ({
           </div>
         </div>
       )}
-
-      {/* Player Scores & Votes Modal */}
-      <PlayerScoresModal
-        isOpen={showScoresModal}
-        onClose={() => setShowScoresModal(false)}
-        players={players}
-        pastMatches={pastMatches}
-      />
     </div>
   );
 };

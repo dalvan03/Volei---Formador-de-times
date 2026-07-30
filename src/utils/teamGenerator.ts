@@ -16,8 +16,6 @@ export function generateBalancedTeams(
     throw new Error('É necessário pelo menos 2 jogadores presentes para formar os times.');
   }
 
-  const teamAName = options.teamAName || 'Time Azul';
-  const teamBName = options.teamBName || 'Time Amarelo';
   const teamAColor = options.teamAColor || 'bg-blue-500';
   const teamBColor = options.teamBColor || 'bg-amber-500';
 
@@ -63,8 +61,12 @@ export function generateBalancedTeams(
     // 2. Positional balance penalty
     const posA: Record<string, number> = {};
     const posB: Record<string, number> = {};
-    teamAPlayers.forEach((p) => (posA[p.position] = (posA[p.position] || 0) + 1));
-    teamBPlayers.forEach((p) => (posB[p.position] = (posB[p.position] || 0) + 1));
+    teamAPlayers.forEach((p) => {
+      if (p.position) posA[p.position] = (posA[p.position] || 0) + 1;
+    });
+    teamBPlayers.forEach((p) => {
+      if (p.position) posB[p.position] = (posB[p.position] || 0) + 1;
+    });
 
     let posPenalty = 0;
     // Prefer both teams to have at least 1 setter if present
@@ -111,6 +113,25 @@ export function generateBalancedTeams(
       ratingB: 4.0,
     };
   }
+
+  const randomPlayerA = bestCombination.teamAPlayers.length
+    ? bestCombination.teamAPlayers[Math.floor(Math.random() * bestCombination.teamAPlayers.length)]
+    : null;
+  const randomPlayerB = bestCombination.teamBPlayers.length
+    ? bestCombination.teamBPlayers[Math.floor(Math.random() * bestCombination.teamBPlayers.length)]
+    : null;
+
+  const getTeamName = (customName?: string, randomPlayer?: Player | null, fallback = 'Time A') => {
+    if (customName) return customName;
+    if (randomPlayer) {
+      const firstName = randomPlayer.name.trim().split(' ')[0];
+      return `Time ${firstName}`;
+    }
+    return fallback;
+  };
+
+  const teamAName = getTeamName(options.teamAName, randomPlayerA, 'Time A');
+  const teamBName = getTeamName(options.teamBName, randomPlayerB, 'Time B');
 
   const teamA: Team = {
     id: 'teamA',

@@ -14,6 +14,7 @@ export interface Player {
   avatarBg: string;
   isAdmin?: boolean;
   active?: boolean; // Active in group
+  isGuest?: boolean; // True if player is a guest without registration
 }
 
 export interface Team {
