@@ -21,6 +21,7 @@ export function getStoredPlayers(): Player[] {
 export function savePlayers(players: Player[]): void {
   try {
     localStorage.setItem(KEYS.PLAYERS, JSON.stringify(players));
+    syncDbToServer();
   } catch (e) {
     console.error('Error saving players', e);
   }
@@ -38,6 +39,7 @@ export function getStoredMatches(): Match[] {
 export function saveMatches(matches: Match[]): void {
   try {
     localStorage.setItem(KEYS.MATCHES, JSON.stringify(matches));
+    syncDbToServer();
   } catch (e) {
     console.error('Error saving matches', e);
   }
@@ -54,12 +56,12 @@ export function getStoredBalanceFeedbacks(): BalanceFeedback[] {
 
 export function saveBalanceFeedback(feedback: BalanceFeedback): void {
   const current = getStoredBalanceFeedbacks();
-  // replace or append if already evaluated for this match & evaluator
   const filtered = current.filter(
     (f) => !(f.matchId === feedback.matchId && f.evaluatorPhone === feedback.evaluatorPhone)
   );
   filtered.push(feedback);
   localStorage.setItem(KEYS.BALANCE_FEEDBACKS, JSON.stringify(filtered));
+  syncDbToServer();
 }
 
 export function getStoredRatingFeedbacks(): PlayerRatingFeedback[] {
@@ -78,7 +80,6 @@ export function savePlayerRatingFeedbacks(
 ): void {
   const currentFeedbacks = getStoredRatingFeedbacks();
   
-  // Remove existing ratings for this match and evaluator
   const updatedFeedbacks = currentFeedbacks.filter(
     (rf) => !(rf.matchId === matchId && rf.evaluatorPhone === evaluatorPhone)
   );
@@ -95,8 +96,8 @@ export function savePlayerRatingFeedbacks(
   const allFeedbacks = [...updatedFeedbacks, ...newFeedbacks];
   localStorage.setItem(KEYS.RATING_FEEDBACKS, JSON.stringify(allFeedbacks));
 
-  // Recalculate dynamic player ratings
   recalculateAllPlayerRatings();
+  syncDbToServer();
 }
 
 export function deleteFeedbacksForMatch(matchId: string): void {
@@ -107,6 +108,8 @@ export function deleteFeedbacksForMatch(matchId: string): void {
   const ratingFeedbacks = getStoredRatingFeedbacks();
   const updatedRating = ratingFeedbacks.filter((rf) => rf.matchId !== matchId);
   localStorage.setItem(KEYS.RATING_FEEDBACKS, JSON.stringify(updatedRating));
+
+  syncDbToServer();
 }
 
 export function recalculateAllPlayerRatings(): Player[] {
@@ -114,7 +117,6 @@ export function recalculateAllPlayerRatings(): Player[] {
   const allRatings = getStoredRatingFeedbacks();
 
   const updatedPlayers = players.map((player) => {
-    // Find all ratings received by this player
     const receivedRatings = allRatings.filter((r) => r.targetPlayerId === player.id);
     if (receivedRatings.length === 0) {
       return {
@@ -134,7 +136,9 @@ export function recalculateAllPlayerRatings(): Player[] {
     };
   });
 
-  savePlayers(updatedPlayers);
+  try {
+    localStorage.setItem(KEYS.PLAYERS, JSON.stringify(updatedPlayers));
+  } catch {}
   return updatedPlayers;
 }
 
@@ -161,4 +165,74 @@ export function resetAllData(): void {
   localStorage.removeItem(KEYS.BALANCE_FEEDBACKS);
   localStorage.removeItem(KEYS.RATING_FEEDBACKS);
   localStorage.removeItem(KEYS.SESSION);
+
+  fetch('/api/reset', { method: 'POST' }).catch(() => {});
+}
+
+// SERVER BACKEND DB SYNC
+export async function syncDbToServer(): Promise<void> {
+  try {
+    const payload = {
+      players: getStoredPlayers(),
+      matches: getStoredMatches(),
+      balanceFeedbacks: getStoredBalanceFeedbacks(),
+      ratingFeedbacks: getStoredRatingFeedbacks(),
+    };
+    await fetch('/api/db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error('Failed to sync database to local server:', err);
+  }
+}
+
+export async function fetchDbFromServer(): Promise<{
+  players: Player[];
+  matches: Match[];
+  balanceFeedbacks: BalanceFeedback[];
+  ratingFeedbacks: PlayerRatingFeedback[];
+} | null> {
+  try {
+    const res = await fetch('/api/db');
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.success) {
+      if (!json.data) {
+        // Initial server seed
+        await syncDbToServer();
+        return {
+          players: getStoredPlayers(),
+          matches: getStoredMatches(),
+          balanceFeedbacks: getStoredBalanceFeedbacks(),
+          ratingFeedbacks: getStoredRatingFeedbacks(),
+        };
+      }
+
+      const { players, matches, balanceFeedbacks, ratingFeedbacks } = json.data;
+      if (Array.isArray(players)) {
+        localStorage.setItem(KEYS.PLAYERS, JSON.stringify(players));
+      }
+      if (Array.isArray(matches)) {
+        localStorage.setItem(KEYS.MATCHES, JSON.stringify(matches));
+      }
+      if (Array.isArray(balanceFeedbacks)) {
+        localStorage.setItem(KEYS.BALANCE_FEEDBACKS, JSON.stringify(balanceFeedbacks));
+      }
+      if (Array.isArray(ratingFeedbacks)) {
+        localStorage.setItem(KEYS.RATING_FEEDBACKS, JSON.stringify(ratingFeedbacks));
+      }
+
+      return {
+        players: players || getStoredPlayers(),
+        matches: matches || getStoredMatches(),
+        balanceFeedbacks: balanceFeedbacks || getStoredBalanceFeedbacks(),
+        ratingFeedbacks: ratingFeedbacks || getStoredRatingFeedbacks(),
+      };
+    }
+  } catch (err) {
+    console.error('Failed to fetch database from local server:', err);
+  }
+  return null;
 }

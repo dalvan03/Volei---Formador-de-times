@@ -14,12 +14,10 @@ import {
   UserPlus,
   X,
   Plus,
-  Share2,
 } from 'lucide-react';
 import { Player, Match, UserSession } from '../types';
 import { generateBalancedTeams } from '../utils/teamGenerator';
 import { PlayerAvatar } from './PlayerAvatar';
-import { ShareStoryModal } from './ShareStoryModal';
 
 interface GameDayTabProps {
   players: Player[];
@@ -65,7 +63,6 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
   const [isSwapping, setIsSwapping] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAddGuestModal, setShowAddGuestModal] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
   const [guestNameInput, setGuestNameInput] = useState('');
 
   const handleAddGuestSubmit = (e: React.FormEvent) => {
@@ -303,16 +300,6 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowShareModal(true)}
-                  title="Compartilhar no Instagram/Facebook Story"
-                  className="px-3 py-2 bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 hover:opacity-90 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-pink-500/20 shrink-0"
-                >
-                  <Share2 className="w-4 h-4 text-white" />
-                  <span className="hidden sm:inline">Story</span>
-                </button>
-
                 {currentMatch.status === 'agendada' && (
                   <button
                     type="button"
@@ -738,16 +725,6 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
             </form>
           </div>
         </div>
-      )}
-
-      {/* Share Story Modal */}
-      {showShareModal && currentMatch && (
-        <ShareStoryModal
-          match={currentMatch}
-          players={players}
-          session={session}
-          onClose={() => setShowShareModal(false)}
-        />
       )}
     </div>
   );

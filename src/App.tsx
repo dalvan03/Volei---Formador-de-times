@@ -11,6 +11,7 @@ import {
   getStoredRatingFeedbacks,
   deleteFeedbacksForMatch,
   resetAllData,
+  fetchDbFromServer,
 } from './utils/storage';
 import { Player, Match, UserSession } from './types';
 import { generateBalancedTeams } from './utils/teamGenerator';
@@ -84,29 +85,57 @@ export default function App() {
     };
   };
 
-  // Load initial state
+  // Load initial state and setup real-time sync with local server DB
   useEffect(() => {
-    const loadedPlayers = recalculateAllPlayerRatings();
-    setPlayers(loadedPlayers);
+    const loadState = async () => {
+      const serverData = await fetchDbFromServer();
+      const loadedPlayers = recalculateAllPlayerRatings();
+      setPlayers(loadedPlayers);
 
-    const loadedMatches = getStoredMatches();
-    setMatches(loadedMatches);
+      const loadedMatches = serverData?.matches || getStoredMatches();
+      setMatches(loadedMatches);
 
-    const savedSession = getStoredSession();
-    if (savedSession) {
-      // Refresh player info from current list
-      const matchedPlayer = loadedPlayers.find(
-        (p) => p.phone.replace(/\D/g, '') === savedSession.phone.replace(/\D/g, '')
-      );
-      setSession({
-        phone: savedSession.phone,
-        player: matchedPlayer,
-        isLoggedIn: true,
-        isAdmin: matchedPlayer ? matchedPlayer.isAdmin || false : false,
-      });
-    } else {
-      setSession(null);
-    }
+      const savedSession = getStoredSession();
+      if (savedSession) {
+        const matchedPlayer = loadedPlayers.find(
+          (p) => p.phone.replace(/\D/g, '') === savedSession.phone.replace(/\D/g, '')
+        );
+        setSession({
+          phone: savedSession.phone,
+          player: matchedPlayer,
+          isLoggedIn: true,
+          isAdmin: matchedPlayer ? matchedPlayer.isAdmin || false : false,
+        });
+      } else {
+        setSession(null);
+      }
+    };
+
+    loadState();
+
+    // Poll local server DB every 3 seconds for real-time updates across devices
+    const interval = setInterval(async () => {
+      const serverData = await fetchDbFromServer();
+      if (serverData) {
+        setPlayers(serverData.players);
+        setMatches(serverData.matches);
+      }
+    }, 3000);
+
+    const handleFocus = async () => {
+      const serverData = await fetchDbFromServer();
+      if (serverData) {
+        setPlayers(serverData.players);
+        setMatches(serverData.matches);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const handleLogout = () => {
