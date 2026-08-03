@@ -26,3 +26,23 @@ Para realizar o deploy no servidor de aplicação:
 ```
 
 O script `deploy.sh` fará a sincronização dos arquivos via `rsync` e executará o `docker compose up -d --build` remotamente no servidor.
+
+### 🗄️ Gerenciamento do Banco de Dados em Produção
+
+Para manipular os dados de produção de forma simples:
+
+1. **Baixar o banco de dados de produção para o seu computador:**
+   ```bash
+   ./pull-db.sh
+   ```
+   *(Cria um backup local automaticamente e salva os dados de produção em `./data/db.json`)*.
+
+2. **Editar o arquivo localmente:**
+   - Abra o arquivo [data/db.json](file:///home/xcami/Volei---Formador-de-times/data/db.json) em qualquer editor de código.
+
+3. **Enviar as alterações de volta para Produção:**
+   ```bash
+   ./push-db.sh
+   ```
+   *(Cria um backup de segurança no servidor remoto e reinicia o container para aplicar as mudanças)*.
+
