@@ -1,6 +1,6 @@
 # CHANGELOG:
 
---- VERSION 1.0.4 ---
+--- VERSION 1.0.4 --- 
 Atualizado guia de deploy para remover uso de `sudo` (recomendado adicionar usuário ao grupo docker) e script de deploy mais robusto.
 
 --- VERSION 1.0.3 ---
