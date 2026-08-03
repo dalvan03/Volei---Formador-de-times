@@ -9,3 +9,4 @@ coverage/
 data/*
 scripts/
 deploy.sh
+SERVER-ROLES.md
