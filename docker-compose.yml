@@ -1,0 +1,19 @@
+services:
+  volei-formador-de-times:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: volei-formador-de-times
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - ./data:/app/data
+    networks:
+      - nginx-proxy-network
+
+networks:
+  nginx-proxy-network:
+    external: true
+    name: nginx-proxy
