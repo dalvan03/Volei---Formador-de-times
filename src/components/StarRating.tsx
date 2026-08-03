@@ -62,6 +62,11 @@ export const StarRating: React.FC<StarRatingProps> = ({
             {RATING_LABELS[value] || `${value.toFixed(1)}`}
           </span>
         )}
+        {showLabel && value === 0 && (
+          <span className="ml-2 text-xs font-semibold text-amber-600">
+            Avalie
+          </span>
+        )}
       </div>
     </div>
   );

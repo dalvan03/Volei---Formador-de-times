@@ -145,6 +145,16 @@ export const FeedbackTab: React.FC<FeedbackTabProps> = ({
       return;
     }
 
+    // Check that all teammates received at least 1 star rating
+    const unratedTeammates = teammatesToRate.filter(
+      (p) => !ratingsMap[p.id] || ratingsMap[p.id] < 1
+    );
+
+    if (unratedTeammates.length > 0) {
+      alert('Por favor, atribua uma nota (estrelas) para todos os jogadores do seu time.');
+      return;
+    }
+
     // Save balance feedback
     saveBalanceFeedback({
       id: `bf_${Date.now()}`,
@@ -158,7 +168,7 @@ export const FeedbackTab: React.FC<FeedbackTabProps> = ({
     // Save player ratings
     const ratingsArray: { targetPlayerId: string; rating: number }[] = teammatesToRate.map((p) => ({
       targetPlayerId: p.id,
-      rating: Number(ratingsMap[p.id] || 4),
+      rating: Number(ratingsMap[p.id]),
     }));
 
     savePlayerRatingFeedbacks(targetMatch.id, userPhone, ratingsArray);

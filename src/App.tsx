@@ -183,10 +183,12 @@ export default function App() {
     // 2. Remove feedbacks associated with this match
     deleteFeedbacksForMatch(matchId);
 
-    // 3. Deduct player stats (wins, losses, matchesPlayed) if match was finalized
+    // 3. Deduct player stats (wins, losses, draws, matchesPlayed) if match was finalized
     if (matchToDelete.status === 'finalizada' && matchToDelete.finalScore) {
       const { teamASets, teamBSets } = matchToDelete.finalScore;
+      const isDraw = teamASets === teamBSets;
       const teamAWon = teamASets > teamBSets;
+      const teamBWon = teamBSets > teamASets;
 
       const currentPlayers = getStoredPlayers();
       const updatedPlayers = currentPlayers.map((p) => {
@@ -195,7 +197,15 @@ export default function App() {
 
         if (!inA && !inB) return p;
 
-        const isWinner = (inA && teamAWon) || (inB && !teamAWon);
+        if (isDraw) {
+          return {
+            ...p,
+            matchesPlayed: Math.max(0, p.matchesPlayed - 1),
+            draws: Math.max(0, (p.draws || 0) - 1),
+          };
+        }
+
+        const isWinner = (inA && teamAWon) || (inB && teamBWon);
         return {
           ...p,
           matchesPlayed: Math.max(0, p.matchesPlayed - 1),
@@ -230,6 +240,7 @@ export default function App() {
         rating: 3.0, // Default baseline rating (3.0 for 0 votes)
         ratingCount: 0,
         wins: 0,
+        draws: 0,
         losses: 0,
         matchesPlayed: 0,
         avatarBg: randomBg,
@@ -267,6 +278,7 @@ export default function App() {
       rating: 3.0,
       ratingCount: 0,
       wins: 0,
+      draws: 0,
       losses: 0,
       matchesPlayed: 0,
       avatarBg: randomBg,
@@ -299,6 +311,7 @@ export default function App() {
       rating: 3.0,
       ratingCount: 0,
       wins: 0,
+      draws: 0,
       losses: 0,
       matchesPlayed: 0,
       avatarBg: randomBg,
@@ -397,10 +410,12 @@ export default function App() {
     saveMatches(updatedMatchesList);
     setMatches(updatedMatchesList);
 
-    // If match was finalized, update players wins / losses stats
+    // If match was finalized, update players wins / losses / draws stats
     if (updatedMatch.status === 'finalizada' && updatedMatch.finalScore) {
       const { teamASets, teamBSets } = updatedMatch.finalScore;
+      const isDraw = teamASets === teamBSets;
       const teamAWon = teamASets > teamBSets;
+      const teamBWon = teamBSets > teamASets;
 
       const newPlayers = players.map((p) => {
         const inA = updatedMatch.teamA.playerIds.includes(p.id);
@@ -408,7 +423,15 @@ export default function App() {
 
         if (!inA && !inB) return p;
 
-        const isWinner = (inA && teamAWon) || (inB && !teamAWon);
+        if (isDraw) {
+          return {
+            ...p,
+            matchesPlayed: p.matchesPlayed + 1,
+            draws: (p.draws || 0) + 1,
+          };
+        }
+
+        const isWinner = (inA && teamAWon) || (inB && teamBWon);
         return {
           ...p,
           matchesPlayed: p.matchesPlayed + 1,

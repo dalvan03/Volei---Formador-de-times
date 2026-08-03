@@ -10,6 +10,7 @@ export interface Player {
   ratingCount: number; // Total star ratings received
   wins: number;
   losses: number;
+  draws?: number;
   matchesPlayed: number;
   avatarBg: string;
   isAdmin?: boolean;

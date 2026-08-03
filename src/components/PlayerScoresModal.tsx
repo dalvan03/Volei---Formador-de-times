@@ -374,10 +374,14 @@ export const PlayerScoresModal: React.FC<PlayerScoresModalProps> = ({
                   </div>
 
                   {/* Section 2: Match / Victory Performance Stats */}
-                  <div className="grid grid-cols-4 gap-2 pt-1">
+                  <div className="grid grid-cols-5 gap-1.5 sm:gap-2 pt-1">
                     <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-xl p-2 text-center">
                       <span className="text-[9px] font-bold text-emerald-700 uppercase block">Vitórias</span>
                       <span className="text-xs font-extrabold text-emerald-950">{player.wins}</span>
+                    </div>
+                    <div className="bg-amber-50/70 border border-amber-200/60 rounded-xl p-2 text-center">
+                      <span className="text-[9px] font-bold text-amber-700 uppercase block">Empates</span>
+                      <span className="text-xs font-extrabold text-amber-950">{player.draws || 0}</span>
                     </div>
                     <div className="bg-rose-50/70 border border-rose-200/60 rounded-xl p-2 text-center">
                       <span className="text-[9px] font-bold text-rose-700 uppercase block">Derrotas</span>
