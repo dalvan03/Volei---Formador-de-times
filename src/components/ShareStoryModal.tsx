@@ -14,6 +14,8 @@ import {
   Users,
 } from 'lucide-react';
 import { Match, Player, UserSession } from '../types';
+import { PlayerAvatar } from './PlayerAvatar';
+import logoImg from '../assets/logo.png';
 
 interface ShareStoryModalProps {
   match: Match;
@@ -259,33 +261,30 @@ export const ShareStoryModal: React.FC<ShareStoryModalProps> = ({
               <button
                 type="button"
                 onClick={() => setPerspective('teamA')}
-                className={`py-2 px-2 rounded-xl border transition-all text-[11px] truncate cursor-pointer ${
-                  perspective === 'teamA'
+                className={`py-2 px-2 rounded-xl border transition-all text-[11px] truncate cursor-pointer ${perspective === 'teamA'
                     ? 'bg-blue-600 text-white border-blue-400 shadow-sm'
                     : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 {match.teamA?.name || 'Time A'}
               </button>
               <button
                 type="button"
                 onClick={() => setPerspective('teamB')}
-                className={`py-2 px-2 rounded-xl border transition-all text-[11px] truncate cursor-pointer ${
-                  perspective === 'teamB'
+                className={`py-2 px-2 rounded-xl border transition-all text-[11px] truncate cursor-pointer ${perspective === 'teamB'
                     ? 'bg-amber-600 text-white border-amber-400 shadow-sm'
                     : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 {match.teamB?.name || 'Time B'}
               </button>
               <button
                 type="button"
                 onClick={() => setPerspective('neutral')}
-                className={`py-2 px-2 rounded-xl border transition-all text-[11px] truncate cursor-pointer ${
-                  perspective === 'neutral'
+                className={`py-2 px-2 rounded-xl border transition-all text-[11px] truncate cursor-pointer ${perspective === 'neutral'
                     ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
                     : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 Placar Geral
               </button>
@@ -312,12 +311,14 @@ export const ShareStoryModal: React.FC<ShareStoryModalProps> = ({
               {/* Top Branding Header */}
               <div className="relative z-10 flex items-center justify-between border-b border-slate-800/80 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-md shadow-emerald-500/30">
-                    <Volleyball className="w-5 h-5 fill-slate-950" />
-                  </div>
+                  <img
+                    src={logoImg}
+                    alt="Logo"
+                    className="w-8 h-8 rounded-xl object-cover shadow-md shadow-emerald-500/30"
+                  />
                   <div>
                     <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase block">
-                      VÔLEI GAME DAY
+                      CULTO DE SEGUNDA
                     </span>
                     <span className="text-xs font-bold text-slate-200">
                       {match.title || 'Rodada da Semana'}

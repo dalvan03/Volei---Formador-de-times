@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Match, Player } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
+import logoImg from '../assets/logo.png';
 
 interface ShareTeamsModalProps {
   match: Match;
@@ -242,12 +243,14 @@ Bora pro jogo! 🔥`;
               {/* Card Header */}
               <div className="relative z-10 flex items-center justify-between border-b border-slate-800/90 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-md">
-                    <Volleyball className="w-5 h-5 fill-slate-950" />
-                  </div>
+                  <img
+                    src={logoImg}
+                    alt="Logo"
+                    className="w-8 h-8 rounded-xl object-cover shadow-md"
+                  />
                   <div>
                     <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase block">
-                      VÔLEI GAME DAY
+                      CULTO DE SEGUNDA
                     </span>
                     <span className="text-xs font-bold text-slate-200">
                       Times da Rodada
@@ -329,7 +332,7 @@ Bora pro jogo! 🔥`;
                   🔥 Confronto Equilibrado
                 </span>
                 <span className="text-slate-500 font-medium">
-                  Vôlei Game Day
+                  Culto de Segunda
                 </span>
               </div>
             </div>
