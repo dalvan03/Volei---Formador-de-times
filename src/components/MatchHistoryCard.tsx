@@ -151,11 +151,11 @@ export const MatchHistoryCard: React.FC<MatchHistoryCardProps> = ({
           <div className="grid grid-cols-2 gap-3 pt-2">
             {/* Team A List */}
             <div className="bg-white p-2.5 rounded-xl border border-blue-100/80 shadow-2xs space-y-2">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 gap-1">
                 <span className="text-xs font-black text-blue-700 truncate">
                   {match.teamA?.name || 'Time A'}
                 </span>
-                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md">
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md shrink-0">
                   {teamAPlayers.length}
                 </span>
               </div>
@@ -173,11 +173,11 @@ export const MatchHistoryCard: React.FC<MatchHistoryCardProps> = ({
 
             {/* Team B List */}
             <div className="bg-white p-2.5 rounded-xl border border-amber-100/80 shadow-2xs space-y-2">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 gap-1">
                 <span className="text-xs font-black text-amber-700 truncate">
                   {match.teamB?.name || 'Time B'}
                 </span>
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md">
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md shrink-0">
                   {teamBPlayers.length}
                 </span>
               </div>

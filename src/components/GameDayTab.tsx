@@ -14,10 +14,12 @@ import {
   UserPlus,
   X,
   Plus,
+  MessageCircle,
 } from 'lucide-react';
 import { Player, Match, UserSession } from '../types';
 import { generateBalancedTeams } from '../utils/teamGenerator';
 import { PlayerAvatar } from './PlayerAvatar';
+import { ShareTeamsModal } from './ShareTeamsModal';
 
 interface GameDayTabProps {
   players: Player[];
@@ -63,6 +65,7 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
   const [isSwapping, setIsSwapping] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAddGuestModal, setShowAddGuestModal] = useState(false);
+  const [showShareTeamsModal, setShowShareTeamsModal] = useState(false);
   const [guestNameInput, setGuestNameInput] = useState('');
 
   const handleAddGuestSubmit = (e: React.FormEvent) => {
@@ -418,25 +421,35 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
           {/* Teams Grid & Match Controls */}
           {currentMatch.teamA && currentMatch.teamB && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-500" />
                   Confronto Equilibrado
                 </h3>
-                {currentMatch.status === 'agendada' && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setIsSwapping(!isSwapping)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1 cursor-pointer ${
-                      isSwapping
-                        ? 'bg-amber-500 text-white border-amber-500'
-                        : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                    }`}
+                    onClick={() => setShowShareTeamsModal(true)}
+                    className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 active:scale-98 cursor-pointer"
                   >
-                    <ArrowUpDown className="w-3.5 h-3.5" />
-                    {isSwapping ? 'Cancelar Troca' : 'Troca Manual'}
+                    <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                    <span>Compartilhar Times</span>
                   </button>
-                )}
+                  {currentMatch.status === 'agendada' && (
+                    <button
+                      type="button"
+                      onClick={() => setIsSwapping(!isSwapping)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1 cursor-pointer ${
+                        isSwapping
+                          ? 'bg-amber-500 text-white border-amber-500'
+                          : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                      {isSwapping ? 'Cancelar Troca' : 'Troca Manual'}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {isSwapping && (
@@ -446,81 +459,132 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
               )}
 
               {/* Teams Display */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* TEAM A */}
-                <div className="bg-white rounded-3xl border-2 border-blue-100 shadow-sm overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex items-center justify-between">
-                    <div>
-                      <h4 className="font-extrabold text-base tracking-tight">{currentMatch.teamA.name}</h4>
-                      <p className="text-[11px] text-blue-100 font-medium">
-                        {currentMatch.teamA.playerIds.length} Jogadores
-                      </p>
+              {(() => {
+                const teamAPlayersList = (currentMatch.teamA.playerIds || []).map((id) => getPlayer(id)).filter(Boolean) as Player[];
+                const teamBPlayersList = (currentMatch.teamB.playerIds || []).map((id) => getPlayer(id)).filter(Boolean) as Player[];
+
+                const allPlayers = [...teamAPlayersList, ...teamBPlayersList];
+                const isOdd = allPlayers.length % 2 !== 0;
+
+                let weakestPlayerId: string | null = null;
+                if (isOdd && allPlayers.length > 0) {
+                  const sortedByRating = [...allPlayers].sort((a, b) => {
+                    const rA = a.rating ?? 3.0;
+                    const rB = b.rating ?? 3.0;
+                    if (rA !== rB) return rA - rB;
+                    return (a.matchesPlayed || 0) - (b.matchesPlayed || 0);
+                  });
+                  weakestPlayerId = sortedByRating[0].id;
+                }
+
+                const teamAPlayersFiltered = weakestPlayerId
+                  ? teamAPlayersList.filter((p) => p.id !== weakestPlayerId)
+                  : teamAPlayersList;
+                const teamASum = teamAPlayersFiltered.reduce((acc, p) => acc + (p.rating ?? 3.0), 0);
+                const teamAAvg = teamAPlayersFiltered.length ? teamASum / teamAPlayersFiltered.length : 0;
+
+                const teamBPlayersFiltered = weakestPlayerId
+                  ? teamBPlayersList.filter((p) => p.id !== weakestPlayerId)
+                  : teamBPlayersList;
+                const teamBSum = teamBPlayersFiltered.reduce((acc, p) => acc + (p.rating ?? 3.0), 0);
+                const teamBAvg = teamBPlayersFiltered.length ? teamBSum / teamBPlayersFiltered.length : 0;
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* TEAM A */}
+                    <div className="bg-white rounded-3xl border-2 border-blue-100 shadow-sm overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex items-center justify-between gap-2">
+                        <div>
+                          <h4 className="font-extrabold text-base tracking-tight">{currentMatch.teamA.name}</h4>
+                          <p className="text-[11px] text-blue-100 font-medium">
+                            {currentMatch.teamA.playerIds.length} Jogadores
+                          </p>
+                        </div>
+                        <div className="bg-white/20 px-2.5 py-1 rounded-xl backdrop-blur-xs border border-white/25 shrink-0 text-xs sm:text-sm font-black text-white flex items-center gap-1">
+                          <span>{teamAAvg.toFixed(1)}</span>
+                          <span className="text-amber-300">★</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 divide-y divide-slate-100">
+                        {currentMatch.teamA.playerIds.map((id) => {
+                          const p = getPlayer(id);
+                          if (!p) return null;
+                          const isSelectedForSwap = swapPlayerA === p.id;
+
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => isSwapping && handleManualSwap(p.id)}
+                              className={`py-2.5 px-2 flex items-center justify-between transition-all rounded-xl ${
+                                isSwapping ? 'cursor-pointer hover:bg-blue-50' : ''
+                              } ${isSelectedForSwap ? 'bg-amber-100 ring-2 ring-amber-500' : ''}`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <PlayerAvatar player={p} size="sm" />
+                                <div>
+                                  <p className="text-xs font-bold text-slate-900">{p.name}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* TEAM B */}
+                    <div className="bg-white rounded-3xl border-2 border-amber-100 shadow-sm overflow-hidden">
+                      <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-white flex items-center justify-between gap-2">
+                        <div>
+                          <h4 className="font-extrabold text-base tracking-tight">{currentMatch.teamB.name}</h4>
+                          <p className="text-[11px] text-amber-100 font-medium">
+                            {currentMatch.teamB.playerIds.length} Jogadores
+                          </p>
+                        </div>
+                        <div className="bg-white/20 px-2.5 py-1 rounded-xl backdrop-blur-xs border border-white/25 shrink-0 text-xs sm:text-sm font-black text-white flex items-center gap-1">
+                          <span>{teamBAvg.toFixed(1)}</span>
+                          <span className="text-amber-300">★</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 divide-y divide-slate-100">
+                        {currentMatch.teamB.playerIds.map((id) => {
+                          const p = getPlayer(id);
+                          if (!p) return null;
+                          const isSelectedForSwap = swapPlayerA === p.id;
+
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => isSwapping && handleManualSwap(p.id)}
+                              className={`py-2.5 px-2 flex items-center justify-between transition-all rounded-xl ${
+                                isSwapping ? 'cursor-pointer hover:bg-amber-50' : ''
+                              } ${isSelectedForSwap ? 'bg-amber-100 ring-2 ring-amber-500' : ''}`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <PlayerAvatar player={p} size="sm" />
+                                <div>
+                                  <p className="text-xs font-bold text-slate-900">{p.name}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
+                );
+              })()}
 
-                  <div className="p-3 divide-y divide-slate-100">
-                    {currentMatch.teamA.playerIds.map((id) => {
-                      const p = getPlayer(id);
-                      if (!p) return null;
-                      const isSelectedForSwap = swapPlayerA === p.id;
-
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => isSwapping && handleManualSwap(p.id)}
-                          className={`py-2.5 px-2 flex items-center justify-between transition-all rounded-xl ${
-                            isSwapping ? 'cursor-pointer hover:bg-blue-50' : ''
-                          } ${isSelectedForSwap ? 'bg-amber-100 ring-2 ring-amber-500' : ''}`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <PlayerAvatar player={p} size="sm" />
-                            <div>
-                              <p className="text-xs font-bold text-slate-900">{p.name}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* TEAM B */}
-                <div className="bg-white rounded-3xl border-2 border-amber-100 shadow-sm overflow-hidden">
-                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-white flex items-center justify-between">
-                    <div>
-                      <h4 className="font-extrabold text-base tracking-tight">{currentMatch.teamB.name}</h4>
-                      <p className="text-[11px] text-amber-100 font-medium">
-                        {currentMatch.teamB.playerIds.length} Jogadores
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-3 divide-y divide-slate-100">
-                    {currentMatch.teamB.playerIds.map((id) => {
-                      const p = getPlayer(id);
-                      if (!p) return null;
-                      const isSelectedForSwap = swapPlayerA === p.id;
-
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => isSwapping && handleManualSwap(p.id)}
-                          className={`py-2.5 px-2 flex items-center justify-between transition-all rounded-xl ${
-                            isSwapping ? 'cursor-pointer hover:bg-amber-50' : ''
-                          } ${isSelectedForSwap ? 'bg-amber-100 ring-2 ring-amber-500' : ''}`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <PlayerAvatar player={p} size="sm" />
-                            <div>
-                              <p className="text-xs font-bold text-slate-900">{p.name}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              {/* WhatsApp Share CTA Button */}
+              <button
+                type="button"
+                onClick={() => setShowShareTeamsModal(true)}
+                className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                <MessageCircle className="w-4 h-4 fill-white" />
+                <span>Compartilhar Imagem dos Times no WhatsApp</span>
+              </button>
 
               {/* Start Round CTA (if status is 'agendada') */}
               {currentMatch.status === 'agendada' && (
@@ -725,6 +789,14 @@ export const GameDayTab: React.FC<GameDayTabProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {showShareTeamsModal && currentMatch && (
+        <ShareTeamsModal
+          match={currentMatch}
+          players={players}
+          onClose={() => setShowShareTeamsModal(false)}
+        />
       )}
     </div>
   );

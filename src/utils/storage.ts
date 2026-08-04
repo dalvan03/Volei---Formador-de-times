@@ -184,55 +184,67 @@ export async function syncDbToServer(): Promise<void> {
       body: JSON.stringify(payload),
     });
   } catch (err) {
-    console.error('Failed to sync database to local server:', err);
+    console.warn('Unable to sync database to local server:', err);
   }
 }
 
-export async function fetchDbFromServer(): Promise<{
+export async function fetchDbFromServer(retries = 1): Promise<{
   players: Player[];
   matches: Match[];
   balanceFeedbacks: BalanceFeedback[];
   ratingFeedbacks: PlayerRatingFeedback[];
 } | null> {
-  try {
-    const res = await fetch('/api/db');
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json.success) {
-      if (!json.data) {
-        // Initial server seed
-        await syncDbToServer();
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch('/api/db');
+      if (!res.ok) {
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+        return null;
+      }
+      const json = await res.json();
+      if (json && json.success) {
+        if (!json.data) {
+          // Initial server seed
+          await syncDbToServer();
+          return {
+            players: getStoredPlayers(),
+            matches: getStoredMatches(),
+            balanceFeedbacks: getStoredBalanceFeedbacks(),
+            ratingFeedbacks: getStoredRatingFeedbacks(),
+          };
+        }
+
+        const { players, matches, balanceFeedbacks, ratingFeedbacks } = json.data;
+        if (Array.isArray(players)) {
+          localStorage.setItem(KEYS.PLAYERS, JSON.stringify(players));
+        }
+        if (Array.isArray(matches)) {
+          localStorage.setItem(KEYS.MATCHES, JSON.stringify(matches));
+        }
+        if (Array.isArray(balanceFeedbacks)) {
+          localStorage.setItem(KEYS.BALANCE_FEEDBACKS, JSON.stringify(balanceFeedbacks));
+        }
+        if (Array.isArray(ratingFeedbacks)) {
+          localStorage.setItem(KEYS.RATING_FEEDBACKS, JSON.stringify(ratingFeedbacks));
+        }
+
         return {
-          players: getStoredPlayers(),
-          matches: getStoredMatches(),
-          balanceFeedbacks: getStoredBalanceFeedbacks(),
-          ratingFeedbacks: getStoredRatingFeedbacks(),
+          players: players || getStoredPlayers(),
+          matches: matches || getStoredMatches(),
+          balanceFeedbacks: balanceFeedbacks || getStoredBalanceFeedbacks(),
+          ratingFeedbacks: ratingFeedbacks || getStoredRatingFeedbacks(),
         };
       }
-
-      const { players, matches, balanceFeedbacks, ratingFeedbacks } = json.data;
-      if (Array.isArray(players)) {
-        localStorage.setItem(KEYS.PLAYERS, JSON.stringify(players));
+    } catch (err) {
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 400));
+        continue;
       }
-      if (Array.isArray(matches)) {
-        localStorage.setItem(KEYS.MATCHES, JSON.stringify(matches));
-      }
-      if (Array.isArray(balanceFeedbacks)) {
-        localStorage.setItem(KEYS.BALANCE_FEEDBACKS, JSON.stringify(balanceFeedbacks));
-      }
-      if (Array.isArray(ratingFeedbacks)) {
-        localStorage.setItem(KEYS.RATING_FEEDBACKS, JSON.stringify(ratingFeedbacks));
-      }
-
-      return {
-        players: players || getStoredPlayers(),
-        matches: matches || getStoredMatches(),
-        balanceFeedbacks: balanceFeedbacks || getStoredBalanceFeedbacks(),
-        ratingFeedbacks: ratingFeedbacks || getStoredRatingFeedbacks(),
-      };
+      console.warn('Unable to fetch database from local server, fallback to client state:', err);
     }
-  } catch (err) {
-    console.error('Failed to fetch database from local server:', err);
   }
   return null;
 }
